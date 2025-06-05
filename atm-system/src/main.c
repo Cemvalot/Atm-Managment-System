@@ -1,98 +1,107 @@
 #include "header.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-void mainMenu(struct User u)
-{
-    int option;
-    system("clear");
-    printf("\n\n\t\t======= ATM =======\n\n");
-    printf("\n\t\t-->> Feel free to choose one of the options below <<--\n");
-    printf("\n\t\t[1]- Create a new account\n");
-    printf("\n\t\t[2]- Update account information\n");
-    printf("\n\t\t[3]- Check accounts\n");
-    printf("\n\t\t[4]- Check list of owned account\n");
-    printf("\n\t\t[5]- Make Transaction\n");
-    printf("\n\t\t[6]- Remove existing account\n");
-    printf("\n\t\t[7]- Transfer ownership\n");
-    printf("\n\t\t[8]- Exit\n");
-    scanf("%d", &option);
-
-    switch (option)
-    {
-    case 1:
-        createNewAcc(u);
-        break;
-    case 2:
-        updateAccount(u);
-        break;
-    case 3:
-        checkAccount(u);
-        break;
-    case 4:
-        checkAllAccounts(u);
-        break;
-    case 5:
-        makeTransaction(u);
-        break;
-    case 6:
-        removeAccount(u);
-        break;
-    case 7:
-        transferOwnership(u);
-        break;
-    case 8:
-        exit(1);
-        break;
-    default:
-        printf("Invalid operation!\n");
-    }
-};
-
+/* 
+ * initMenu - Initializes the system by prompting the user to log in or register.
+ *
+ * Updated to:
+ *   1) Check if username exists. If not, show error and let the user retry.
+ *   2) Allow up to 3 attempts for password if the username is valid.
+ *   3) If all 3 fail, block and exit (or do something else).
+ */
 void initMenu(struct User *u)
 {
-    int r = 0;
     int option;
+    int loggedIn = 0;
+
     system("clear");
     printf("\n\n\t\t======= ATM =======\n");
-    printf("\n\t\t-->> Feel free to login / register :\n");
-    printf("\n\t\t[1]- login\n");
-    printf("\n\t\t[2]- register\n");
-    printf("\n\t\t[3]- exit\n");
-    while (!r)
-    {
-        scanf("%d", &option);
-        switch (option)
-        {
-        case 1:
-            loginMenu(u->name, u->password);
-            if (strcmp(u->password, getPassword(*u)) == 0)
-            {
-                printf("\n\nPassword Match!");
+    printf("\n\t\t-->> Login / Register :\n");
+    printf("\n\t\t[1]- Login\n");
+    printf("\n\t\t[2]- Register\n");
+    printf("\n\t\t[3]- Exit\n");
+
+    while (!loggedIn) {
+        printf("\nChoose an option: ");
+        if (scanf("%d", &option) != 1) {
+            printf("Invalid input. Please enter a valid number.\n");
+            while(getchar() != '\n'); // Clear input buffer
+            continue;
+        }
+        while(getchar() != '\n'); // Clear leftover input for safety
+
+        switch (option) {
+            case 1: {
+                // Prompt for username
+                system("clear");
+                printf("=== LOGIN ===\n");
+                printf("Enter Username: ");
+                if (scanf("%49s", u->name) != 1) {
+                    printf("Invalid username input.\n");
+                    while(getchar() != '\n');
+                    break; // Return to menu
+                }
+                while(getchar() != '\n'); // Flush leftover input
+
+                // Check if user exists
+                if (!userExists(u->name)) {
+                    printf("\nUsername '%s' doesn't exist.\n", u->name);
+                    printf("Please register or contact the bank if you believe this is an error.\n\n");
+                    break; // Return to main menu loop
+                }
+
+                // If user exists, allow up to 3 attempts for the correct password
+                int attempts = 0;
+                int authenticated = 0;
+                while (attempts < 3) {
+                    loginMenu(u->password);  // Asks for password with echo off
+                    if (verifyCredentials(u)) {
+                        authenticated = 1;
+                        break;
+                    } else {
+                        attempts++;
+                        if (attempts < 3) {
+                            printf("Attempts left: %d\n", 3 - attempts);
+                        }
+                    }
+                }
+                if (!authenticated) {
+                    // All 3 attempts failed
+                    printf("\nToo many failed attempts.\n");
+                    printf("Please contact your bank. Your account is temporarily blocked.\n");
+                    exit(1);  // or you could break to show the menu again, your choice
+                }
+
+                // If authenticated
+                loggedIn = 1;
+                break;
             }
-            else
-            {
-                printf("\nWrong password!! or User Name\n");
-                exit(1);
-            }
-            r = 1;
-            break;
-        case 2:
-            registerMenu(u->name, u->password);
-            r = 1;
-            break;
-        case 3:
-            exit(1);
-            break;
-        default:
-            printf("Insert a valid operation!\n");
+            case 2:
+                registerUserAuth(u);
+                // If registration + immediate login was successful, we’re logged in
+                loggedIn = 1;
+                break;
+            case 3:
+                exit(0);
+                break;
+            default:
+                printf("Insert a valid operation!\n");
         }
     }
-};
+}
 
+/**
+ * main - The entry point of the ATM program.
+ *
+ * It initializes the system (login/registration) and then calls the main menu
+ * for further account operations.
+ */
 int main()
 {
     struct User u;
-    
     initMenu(&u);
-    mainMenu(u);
+    mainMenu(u);  // Calls mainMenu from your system module(s)
     return 0;
 }

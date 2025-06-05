@@ -1,16 +1,28 @@
-objects = src/main.o src/system.o src/auth.o
+CC = gcc
+CFLAGS = -Wall -Wextra -std=c99 -D_GNU_SOURCE -I. $(shell pkg-config --cflags openssl)
+SRCDIR = src
+OBJDIR = src
+SRCS = $(SRCDIR)/auth.c $(SRCDIR)/main.c $(SRCDIR)/system_input.c $(SRCDIR)/system_db.c $(SRCDIR)/system_menu.c $(SRCDIR)/system.c
+OBJS = $(SRCS:.c=.o)
+TARGET = atm
 
-atm : $(objects)
-	cc -o atm $(objects)
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+    CRYPTLIB =
+else
+    CRYPTLIB = -lcrypt
+endif
 
-main.o : src/header.h
-kbd.o : src/header.h
-command.o : src/header.h
-display.o : src/header.h
-insert.o : src/header.h
-search.o : src/header.h
-files.o : src/header.h
-utils.o : src/header.h
+all: $(TARGET)
 
-clean :
-	rm -f $(objects)
+$(TARGET): $(OBJS)
+	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(CRYPTLIB) -lsqlite3 $(shell pkg-config --libs openssl)
+
+$(OBJDIR)/%.o: $(SRCDIR)/%.c $(SRCDIR)/header.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+run: $(TARGET)
+	./$(TARGET)
+
+clean:
+	rm -f $(OBJS) $(TARGET)
